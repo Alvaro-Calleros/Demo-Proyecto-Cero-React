@@ -3,18 +3,24 @@ import React from 'react';
 const ModalRecipe = ({ modalMeal, setModalMeal }) => {
   if (!modalMeal) return null;
 
-  // Preprocesamos los ingredientes
   const ingredients = Array.from({ length: 20 }, (_, i) => {
     const ing = modalMeal[`strIngredient${i+1}`];
     const msr = modalMeal[`strMeasure${i+1}`];
     return ing && ing.trim() ? `${msr} ${ing}` : null;
   }).filter(Boolean);
 
+  const steps = modalMeal.strInstructions
+    ? modalMeal.strInstructions
+        .split(/\r?\n|\.\s+(?=[A-Z])/)
+        .map(s => s.trim())
+        .filter(Boolean)
+    : [];
+
   return (
     <div className="modal-overlay show" onClick={() => setModalMeal(null)}>
       <div
         className="modal-content"
-        onClick={e => e.stopPropagation() /* evitar cierre al click dentro */}
+        onClick={e => e.stopPropagation()}
       >
         <button
           className="modal-close-btn"
@@ -44,7 +50,11 @@ const ModalRecipe = ({ modalMeal, setModalMeal }) => {
         </ul>
 
         <h3>Instrucciones</h3>
-        <p className="modal-instructions">{modalMeal.strInstructions}</p>
+        <ol className="modal-instructions">
+          {steps.map((step, idx) => (
+            <li key={idx}>{step}</li>
+          ))}
+        </ol>
 
         {modalMeal.strYoutube && (
           <>

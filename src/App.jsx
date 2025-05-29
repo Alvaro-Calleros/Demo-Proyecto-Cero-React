@@ -4,6 +4,7 @@ import MealList from './MealList';
 import ModalRecipe from './ModalRecipe';
 import MessageBox from './MessageBox';
 import LoadingIndicator from './LoadingIndicator';
+import Footer from './Footer';
 
 const App = () => {
   const [query, setQuery] = useState('');
@@ -21,7 +22,6 @@ const App = () => {
 
   const fetchMeals = async (endpoint) => {
     setLoading(true);
-    setMeals([]);
     setMessage(null);
     try {
       const res = await fetch(`${API_BASE_URL}${endpoint}`);
@@ -43,36 +43,53 @@ const App = () => {
     else showMessage(`No se encontraron recetas para "${query}".`, 'info');
   };
 
-  const getRandomMeal = async () => {
-    const data = await fetchMeals('random.php');
-    if (data?.meals) setMeals(data.meals);
-    else showMessage('No se pudo cargar una receta aleatoria.', 'error');
-  };
-
   const getMealDetailsById = async (id) => {
     const data = await fetchMeals(`lookup.php?i=${id}`);
     if (data?.meals?.length) setModalMeal(data.meals[0]);
     else showMessage('No se pudieron cargar los detalles de la receta.', 'error');
   };
 
+  const getRandomMeals = async () => {
+    setLoading(true);
+    setMeals([]);
+    setMessage(null);
+    try {
+      const requests = Array.from({ length: 20 }, () => fetch(`${API_BASE_URL}random.php`).then(res => res.json()));
+      const results = await Promise.all(requests);
+      const allMeals = results
+        .map(r => r.meals && r.meals[0])
+        .filter(Boolean);
+      const uniqueMeals = Array.from(new Map(allMeals.map(m => [m.idMeal, m])).values());
+      setMeals(uniqueMeals);
+      if (!uniqueMeals.length) showMessage('No se encontraron recetas iniciales.', 'info');
+    } catch (err) {
+      showMessage(`Error al cargar recetas iniciales: ${err.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    getRandomMeal();
+    getRandomMeals();
   }, []);
 
   return (
-    <div className="app-container">
-      <h1 className="text-4xl md:text-5xl font-extrabold mb-8">MAGIC IN RECIPIES</h1>
-      <SearchBar 
-        query={query} 
-        setQuery={setQuery} 
-        searchMealByName={searchMealByName} 
-        getRandomMeal={getRandomMeal} 
-      />
-      <MessageBox message={message} />
-      <LoadingIndicator loading={loading} />
-      <MealList meals={meals} getMealDetailsById={getMealDetailsById} />
-      <ModalRecipe modalMeal={modalMeal} setModalMeal={setModalMeal} />
-    </div>
+    <>
+      <div className="app-container">
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-8">GourmetGrid.com</h1>
+        <SearchBar 
+          query={query} 
+          setQuery={setQuery} 
+          searchMealByName={searchMealByName} 
+          getRandomMeals={getRandomMeals} 
+        />
+        <MessageBox message={message} />
+        <LoadingIndicator loading={loading} />
+        <MealList meals={meals} getMealDetailsById={getMealDetailsById} />
+        <ModalRecipe modalMeal={modalMeal} setModalMeal={setModalMeal} />
+      </div>
+      <Footer/>
+    </>
   );
 };
 
